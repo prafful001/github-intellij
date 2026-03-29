@@ -70,4 +70,30 @@ public class WalletServiceImpl implements WalletService {
 
         return wallet;
     }
+    @Override
+    @Transactional
+    public Wallet withdraw(UUID walletId, BigDecimal amount) {
+        Wallet wallet = walletRepository.findById(walletId)
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet not found"));
+
+        // 400 - Insufficient funds
+        if (wallet.getBalance().compareTo(amount) < 0) {
+            throw new IllegalArgumentException("Insufficient funds");
+        }
+
+        // Update balance
+        wallet.setBalance(wallet.getBalance().subtract(amount));
+        walletRepository.save(wallet);
+
+        // Create transaction record
+        Transaction transaction = new Transaction();
+        transaction.setWallet(wallet);
+        transaction.setAmount(amount);
+        transaction.setType(TransactionType.WITHDRAWAL);
+        transaction.setTimestamp(LocalDateTime.now());
+        transaction.setDescription("Withdrawal");
+        transactionRepository.save(transaction);
+
+        return wallet;
+    }
 }
