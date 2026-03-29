@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @RestController
@@ -75,5 +76,18 @@ public class WalletController {
                                            @Valid @RequestBody WithdrawRequest request) {
         Wallet wallet = walletService.withdraw(id, request.getAmount());
         return ResponseEntity.ok(wallet);
+    }
+    @Operation(
+            summary = "Get wallet balance",
+            description = "Returns the current balance of the specified wallet.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Balance retrieved successfully"),
+                    @ApiResponse(responseCode = "404", description = "Wallet not found")
+            }
+    )
+    @GetMapping("/{id}/balance")
+    public ResponseEntity<BigDecimal> getBalance(@PathVariable UUID id) {
+        BigDecimal balance = walletService.getBalance(id);
+        return ResponseEntity.ok(balance);
     }
 }

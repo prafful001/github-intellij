@@ -134,4 +134,10 @@ public class WalletServiceImpl implements WalletService {
         inTransaction.setDescription("Transfer in from wallet: " + fromWalletId);
         transactionRepository.save(inTransaction);
     }
+    @Override
+    public BigDecimal getBalance(UUID walletId) {
+        Wallet wallet = walletRepository.findById(walletId)
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet not found"));
+        return wallet.getBalance();
+    }
 }
