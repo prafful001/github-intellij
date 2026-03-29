@@ -1,7 +1,6 @@
 package com.rs.payments.wallet.service.impl;
-
-import com.rs.payments.wallet.exception.DuplicateResourceException;
 import com.rs.payments.wallet.exception.UserAlreadyExistsException;
+import com.rs.payments.wallet.exception.DuplicateResourceException;
 import com.rs.payments.wallet.model.User;
 import com.rs.payments.wallet.repository.UserRepository;
 import com.rs.payments.wallet.service.UserService;

@@ -1,25 +1,35 @@
 package com.rs.payments.wallet.service.impl;
 
-import com.rs.payments.wallet.exception.ResourceNotFoundException;
 import com.rs.payments.wallet.exception.DuplicateResourceException;
+import com.rs.payments.wallet.exception.ResourceNotFoundException;
+import com.rs.payments.wallet.model.Transaction;
+import com.rs.payments.wallet.model.TransactionType;
 import com.rs.payments.wallet.model.User;
 import com.rs.payments.wallet.model.Wallet;
+import com.rs.payments.wallet.repository.TransactionRepository;
 import com.rs.payments.wallet.repository.UserRepository;
 import com.rs.payments.wallet.repository.WalletRepository;
 import com.rs.payments.wallet.service.WalletService;
-import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 public class WalletServiceImpl implements WalletService {
 
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
+    private final TransactionRepository transactionRepository;
 
-    public WalletServiceImpl(UserRepository userRepository, WalletRepository walletRepository) {
+    public WalletServiceImpl(UserRepository userRepository,
+                             WalletRepository walletRepository,
+                             TransactionRepository transactionRepository) {
         this.userRepository = userRepository;
         this.walletRepository = walletRepository;
+        this.transactionRepository = transactionRepository;
     }
 
     @Override
@@ -27,7 +37,6 @@ public class WalletServiceImpl implements WalletService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // 400 - User already has a wallet
         if (walletRepository.existsByUser(user)) {
             throw new DuplicateResourceException("User already has a wallet");
         }
@@ -37,5 +46,28 @@ public class WalletServiceImpl implements WalletService {
         wallet.setUser(user);
 
         return walletRepository.save(wallet);
+    }
+
+    @Override
+    @Transactional
+    public Wallet deposit(UUID walletId, BigDecimal amount) {
+        // Fetch wallet
+        Wallet wallet = walletRepository.findById(walletId)
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet not found"));
+
+        // Update balance
+        wallet.setBalance(wallet.getBalance().add(amount));
+        walletRepository.save(wallet);
+
+        // Create transaction record
+        Transaction transaction = new Transaction();
+        transaction.setWallet(wallet);
+        transaction.setAmount(amount);
+        transaction.setType(TransactionType.DEPOSIT);
+        transaction.setTimestamp(LocalDateTime.now());
+        transaction.setDescription("Deposit");
+        transactionRepository.save(transaction);
+
+        return wallet;
     }
 }
