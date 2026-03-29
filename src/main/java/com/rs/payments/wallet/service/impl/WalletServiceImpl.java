@@ -1,6 +1,7 @@
 package com.rs.payments.wallet.service.impl;
 
 import com.rs.payments.wallet.exception.ResourceNotFoundException;
+import com.rs.payments.wallet.exception.DuplicateResourceException;
 import com.rs.payments.wallet.model.User;
 import com.rs.payments.wallet.model.Wallet;
 import com.rs.payments.wallet.repository.UserRepository;
@@ -8,7 +9,6 @@ import com.rs.payments.wallet.repository.WalletRepository;
 import com.rs.payments.wallet.service.WalletService;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 
 @Service
@@ -27,12 +27,15 @@ public class WalletServiceImpl implements WalletService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        // 400 - User already has a wallet
+        if (walletRepository.existsByUser(user)) {
+            throw new DuplicateResourceException("User already has a wallet");
+        }
+
         Wallet wallet = new Wallet();
         wallet.setBalance(BigDecimal.ZERO);
         wallet.setUser(user);
-        user.setWallet(wallet);
 
-        user = userRepository.save(user); // Cascade saves wallet
-        return user.getWallet();
+        return walletRepository.save(wallet);
     }
 }

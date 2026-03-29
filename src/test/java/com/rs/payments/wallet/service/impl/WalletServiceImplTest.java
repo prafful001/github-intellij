@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,11 +39,14 @@ class WalletServiceImplTest {
         UUID userId = UUID.randomUUID();
         User user = new User();
         user.setId(userId);
-        
+
+        Wallet savedWallet = new Wallet();
+        savedWallet.setBalance(BigDecimal.ZERO);
+        savedWallet.setUser(user);
+
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        // The service saves the user, which cascades to wallet. 
-        // We mock save to return the user.
-        when(userRepository.save(user)).thenReturn(user);
+        when(walletRepository.existsByUser(user)).thenReturn(false);
+        when(walletRepository.save(any(Wallet.class))).thenReturn(savedWallet);
 
         // When
         Wallet result = walletService.createWalletForUser(userId);
@@ -50,11 +54,10 @@ class WalletServiceImplTest {
         // Then
         assertNotNull(result);
         assertEquals(BigDecimal.ZERO, result.getBalance());
-        assertEquals(walletService.createWalletForUser(userId).getBalance(), BigDecimal.ZERO);
-        
+
         // Verify interactions
-        verify(userRepository, times(2)).findById(userId); // Called twice due to second assert
-        verify(userRepository, times(2)).save(user);
+        verify(userRepository, times(1)).findById(userId);
+        verify(walletRepository, times(1)).save(any(Wallet.class));
     }
 
     @Test
