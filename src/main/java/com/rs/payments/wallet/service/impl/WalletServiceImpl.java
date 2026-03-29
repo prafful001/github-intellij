@@ -96,4 +96,42 @@ public class WalletServiceImpl implements WalletService {
 
         return wallet;
     }
+    @Override
+    @Transactional
+    public void transfer(UUID fromWalletId, UUID toWalletId, BigDecimal amount) {
+        // Fetch both wallets
+        Wallet fromWallet = walletRepository.findById(fromWalletId)
+                .orElseThrow(() -> new ResourceNotFoundException("Source wallet not found"));
+        Wallet toWallet = walletRepository.findById(toWalletId)
+                .orElseThrow(() -> new ResourceNotFoundException("Destination wallet not found"));
+
+        // 400 - Insufficient funds — rolls back entirely due to @Transactional
+        if (fromWallet.getBalance().compareTo(amount) < 0) {
+            throw new IllegalArgumentException("Insufficient funds");
+        }
+
+        // Update balances
+        fromWallet.setBalance(fromWallet.getBalance().subtract(amount));
+        toWallet.setBalance(toWallet.getBalance().add(amount));
+        walletRepository.save(fromWallet);
+        walletRepository.save(toWallet);
+
+        // Create TRANSFER_OUT transaction for sender
+        Transaction outTransaction = new Transaction();
+        outTransaction.setWallet(fromWallet);
+        outTransaction.setAmount(amount);
+        outTransaction.setType(TransactionType.TRANSFER_OUT);
+        outTransaction.setTimestamp(LocalDateTime.now());
+        outTransaction.setDescription("Transfer out to wallet: " + toWalletId);
+        transactionRepository.save(outTransaction);
+
+        // Create TRANSFER_IN transaction for receiver
+        Transaction inTransaction = new Transaction();
+        inTransaction.setWallet(toWallet);
+        inTransaction.setAmount(amount);
+        inTransaction.setType(TransactionType.TRANSFER_IN);
+        inTransaction.setTimestamp(LocalDateTime.now());
+        inTransaction.setDescription("Transfer in from wallet: " + fromWalletId);
+        transactionRepository.save(inTransaction);
+    }
 }
